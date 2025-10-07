@@ -1,0 +1,123 @@
+import pygame
+import random
+import sys
+
+# Initialize Pygame
+pygame.init()
+
+# Game Window
+WIDTH, HEIGHT = 600, 600
+ROWS, COLS = 4, 4
+TILE_SIZE = WIDTH // COLS
+GAP = 5
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("🧩 Memory Puzzle Game")
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GRAY = (50, 50, 50)
+COLORS = [
+    (255, 0, 0), (0, 255, 0),
+    (0, 0, 255), (255, 255, 0),
+    (255, 165, 0), (255, 192, 203),
+    (0, 255, 255), (128, 0, 128)
+]
+# Duplicate and shuffle colors (for pairs)
+COLORS *= 2
+random.shuffle(COLORS)
+
+# Font
+FONT = pygame.font.Font(None, 50)
+SMALL_FONT = pygame.font.Font(None, 36)
+
+# Game Variables
+tiles = []
+revealed = []
+matched = []
+first_pick = None
+game_over = False
+
+# Create tile positions
+for row in range(ROWS):
+    for col in range(COLS):
+        rect = pygame.Rect(col * TILE_SIZE + GAP, row * TILE_SIZE + GAP, TILE_SIZE - 2 * GAP, TILE_SIZE - 2 * GAP)
+        tiles.append(rect)
+
+
+def draw_board():
+    SCREEN.fill(GRAY)
+    for i, rect in enumerate(tiles):
+        if i in matched or i in revealed:
+            pygame.draw.rect(SCREEN, COLORS[i], rect)
+        else:
+            pygame.draw.rect(SCREEN, WHITE, rect)
+    pygame.display.update()
+
+
+def check_win():
+    return len(matched) == len(tiles)
+
+
+def restart_game():
+    global COLORS, matched, revealed, first_pick, game_over
+    COLORS *= 0  # Clear old
+    COLORS.extend([
+        (255, 0, 0), (0, 255, 0),
+        (0, 0, 255), (255, 255, 0),
+        (255, 165, 0), (255, 192, 203),
+        (0, 255, 255), (128, 0, 128)
+    ])
+    COLORS *= 2
+    random.shuffle(COLORS)
+    matched.clear()
+    revealed.clear()
+    first_pick = None
+    game_over = False
+
+
+# Game Loop
+clock = pygame.time.Clock()
+running = True
+
+while running:
+    clock.tick(30)
+
+    draw_board()
+
+    if game_over:
+        win_text = FONT.render("You Win! 🎉", True, WHITE)
+        restart_text = SMALL_FONT.render("Press R to Restart", True, WHITE)
+        SCREEN.blit(win_text, (WIDTH // 2 - 100, HEIGHT // 2 - 50))
+        SCREEN.blit(restart_text, (WIDTH // 2 - 120, HEIGHT // 2 + 10))
+        pygame.display.update()
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+        if event.type == pygame.KEYDOWN:
+            if game_over and event.key == pygame.K_r:
+                restart_game()
+
+        if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
+            pos = pygame.mouse.get_pos()
+            for i, rect in enumerate(tiles):
+                if rect.collidepoint(pos) and i not in revealed and i not in matched:
+                    revealed.append(i)
+                    if first_pick is None:
+                        first_pick = i
+                    else:
+                        # Second pick
+                        if COLORS[first_pick] == COLORS[i]:
+                            matched.extend([first_pick, i])
+                        pygame.display.update()
+                        pygame.time.wait(500)
+                        revealed.clear()
+                        first_pick = None
+
+    if check_win() and not game_over:
+        game_over = True
+
+pygame.quit()
